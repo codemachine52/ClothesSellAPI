@@ -7,13 +7,13 @@ namespace ClothesSell.Models;
 
 public partial class Order
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
     public DateTime CreateDate { get; set; }
 
-    public int CurrentStatusId { get; set; }
+    public int CurrentStatusID { get; set; }
 
-    public int UserId { get; set; }
+    public int UserID { get; set; }
 
     public virtual OrderStatus CurrentStatus { get; set; }
 

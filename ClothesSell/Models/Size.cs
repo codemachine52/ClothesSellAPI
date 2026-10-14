@@ -7,7 +7,7 @@ namespace ClothesSell.Models;
 
 public partial class Size
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
     public string SizeChar { get; set; }
 

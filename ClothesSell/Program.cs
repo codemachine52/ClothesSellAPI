@@ -42,7 +42,7 @@ string GenerateToken(User user)
 {
     var claims = new[]
     {
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
         new Claim(ClaimTypes.Name, user.Login),
         new Claim(ClaimTypes.Role, user.Role?.Name ?? "Клиент")
     };
@@ -79,7 +79,7 @@ app.MapPost("/api/auth/register", async (RegisterReq req, MG_PR3Context db) =>
         Login = req.Login,
         Address = req.Address,
         Password = BCrypt.Net.BCrypt.HashPassword(req.Password), 
-        RoleId = clientRole.Id
+        RoleID = clientRole.ID
     };
 
     db.Users.Add(user);
@@ -155,8 +155,8 @@ async (
     var order = new Order
     {
         CreateDate = DateTime.Now,
-        CurrentStatusId = newStatus.Id,
-        UserId = userId
+        CurrentStatusID = newStatus.ID,
+        UserID = userId
     };
 
     db.Orders.Add(order);
@@ -166,8 +166,8 @@ async (
     {
         db.OrderClothes.Add(new OrderClothe
         {
-            OrderId = order.Id,
-            ClothesSizeId = item.ClothesSizeID,
+            OrderID = order.ID,
+            ClothesSizeID = item.ClothesSizeID,
             Count = item.Count
         });
     }
@@ -175,7 +175,7 @@ async (
 
     return Results.Ok(new
     {
-        orderId = order.Id,
+        orderId = order.ID,
         createDate = order.CreateDate,
         status = newStatus.StatusName,
         items = req.Items.Count

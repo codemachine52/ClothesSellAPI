@@ -43,9 +43,6 @@ public partial class MG_PR3Context : DbContext
     {
         modelBuilder.Entity<Clothe>(entity =>
         {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(150);
@@ -53,10 +50,9 @@ public partial class MG_PR3Context : DbContext
                 .IsRequired()
                 .HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 0)");
-            entity.Property(e => e.TypeId).HasColumnName("TypeID");
 
             entity.HasOne(d => d.Type).WithMany(p => p.Clothes)
-                .HasForeignKey(d => d.TypeId)
+                .HasForeignKey(d => d.TypeID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Clothes_Types");
         });
@@ -65,19 +61,13 @@ public partial class MG_PR3Context : DbContext
         {
             entity.ToTable("ClothesSize");
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
-            entity.Property(e => e.ClothesId).HasColumnName("ClothesID");
-            entity.Property(e => e.SizeId).HasColumnName("SizeID");
-
             entity.HasOne(d => d.Clothes).WithMany(p => p.ClothesSizes)
-                .HasForeignKey(d => d.ClothesId)
+                .HasForeignKey(d => d.ClothesID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClothesSize_Clothes");
 
             entity.HasOne(d => d.Size).WithMany(p => p.ClothesSizes)
-                .HasForeignKey(d => d.SizeId)
+                .HasForeignKey(d => d.SizeID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClothesSize_Size");
         });
@@ -86,39 +76,28 @@ public partial class MG_PR3Context : DbContext
         {
             entity.ToTable("Order");
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.CreateDate).HasColumnType("datetime");
-            entity.Property(e => e.CurrentStatusId).HasColumnName("CurrentStatusID");
-            entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.CurrentStatus).WithMany(p => p.Orders)
-                .HasForeignKey(d => d.CurrentStatusId)
+                .HasForeignKey(d => d.CurrentStatusID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Order_OrderStatus");
 
             entity.HasOne(d => d.User).WithMany(p => p.Orders)
-                .HasForeignKey(d => d.UserId)
+                .HasForeignKey(d => d.UserID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Order_Users");
         });
 
         modelBuilder.Entity<OrderClothe>(entity =>
         {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
-            entity.Property(e => e.ClothesSizeId).HasColumnName("ClothesSizeID");
-            entity.Property(e => e.OrderId).HasColumnName("OrderID");
-
             entity.HasOne(d => d.ClothesSize).WithMany(p => p.OrderClothes)
-                .HasForeignKey(d => d.ClothesSizeId)
+                .HasForeignKey(d => d.ClothesSizeID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderClothes_ClothesSize");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderClothes)
-                .HasForeignKey(d => d.OrderId)
+                .HasForeignKey(d => d.OrderID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderClothes_Order");
         });
@@ -127,9 +106,6 @@ public partial class MG_PR3Context : DbContext
         {
             entity.ToTable("OrderStatus");
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.StatusName)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -139,9 +115,6 @@ public partial class MG_PR3Context : DbContext
         {
             entity.ToTable("Role");
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -151,9 +124,6 @@ public partial class MG_PR3Context : DbContext
         {
             entity.ToTable("Size");
 
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.SizeChar)
                 .IsRequired()
                 .HasMaxLength(5);
@@ -164,9 +134,6 @@ public partial class MG_PR3Context : DbContext
 
         modelBuilder.Entity<Type>(entity =>
         {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -174,9 +141,6 @@ public partial class MG_PR3Context : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
             entity.Property(e => e.Address)
                 .IsRequired()
                 .HasMaxLength(150);
@@ -190,10 +154,9 @@ public partial class MG_PR3Context : DbContext
             entity.Property(e => e.PhoneNumber)
                 .IsRequired()
                 .HasMaxLength(20);
-            entity.Property(e => e.RoleId).HasColumnName("RoleID");
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
-                .HasForeignKey(d => d.RoleId)
+                .HasForeignKey(d => d.RoleID)
                 .HasConstraintName("FK_Users_Role");
         });
 

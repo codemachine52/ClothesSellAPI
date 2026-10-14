@@ -55,7 +55,7 @@
    "UncountableWords": null,
    "UseAsyncStoredProcedureCalls": true,
    "UseBoolPropertiesWithoutDefaultSql": false,
-   "UseDatabaseNames": false,
+   "UseDatabaseNames": true,
    "UseDatabaseNamesForRoutines": true,
    "UseDateOnlyTimeOnly": true,
    "UseDbContextSplitting": false,

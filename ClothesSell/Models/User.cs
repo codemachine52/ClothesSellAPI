@@ -7,7 +7,7 @@ namespace ClothesSell.Models;
 
 public partial class User
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
     public string Name { get; set; }
 
@@ -19,7 +19,7 @@ public partial class User
 
     public string Password { get; set; }
 
-    public int? RoleId { get; set; }
+    public int? RoleID { get; set; }
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 

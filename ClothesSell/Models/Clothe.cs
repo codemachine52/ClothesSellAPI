@@ -7,7 +7,7 @@ namespace ClothesSell.Models;
 
 public partial class Clothe
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
     public string Name { get; set; }
 
@@ -15,7 +15,7 @@ public partial class Clothe
 
     public string Description { get; set; }
 
-    public int TypeId { get; set; }
+    public int TypeID { get; set; }
 
     public bool InSelling { get; set; }
 

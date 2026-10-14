@@ -7,11 +7,11 @@ namespace ClothesSell.Models;
 
 public partial class OrderClothe
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
-    public int ClothesSizeId { get; set; }
+    public int ClothesSizeID { get; set; }
 
-    public int OrderId { get; set; }
+    public int OrderID { get; set; }
 
     public int Count { get; set; }
 

@@ -7,7 +7,7 @@ namespace ClothesSell.Models;
 
 public partial class OrderStatus
 {
-    public int Id { get; set; }
+    public int ID { get; set; }
 
     public string StatusName { get; set; }
 
