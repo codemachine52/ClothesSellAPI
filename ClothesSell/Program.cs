@@ -1,6 +1,7 @@
 using ClothesSell;
 using ClothesSell.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -59,6 +60,9 @@ string GenerateToken(User user)
     return new JwtSecurityTokenHandler().WriteToken(token);
 }
 
+int GetUserId(ClaimsPrincipal p) =>
+    int.Parse(p.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
 app.MapPost("/api/auth/register", async (RegisterReq req, MG_PR3Context db) =>
 {
     if (await db.Users.AnyAsync(u => u.Login == req.Login))
@@ -99,6 +103,84 @@ app.MapPost("/api/auth/login", async (LoginReq req, MG_PR3Context db) =>
     return Results.Json(new AuthResponse(token, user.Role?.Name ?? "Клиент"));
 });
 
-app.MapGet("/api/clothes", (MG_PR3Context context) => Results.Json(context.Clothes));
+app.MapGet("/api/clothes", async (MG_PR3Context context) => Results.Json(await context.Clothes.AsNoTracking().ToListAsync()));
 
+
+app.MapGet("/api/clothes/search", async (string q, MG_PR3Context db) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+        return Results.BadRequest("Параметр 'q' обязателен и не может быть пустым");
+
+    var list = await db.Clothes
+        .Where(c => c.Name.Contains(q))
+        .AsNoTracking()
+        .ToListAsync();
+
+    return Results.Ok(list);
+})
+.WithTags("Clothes")
+.WithSummary("Поиск одежды по части названия (публично)");
+
+app.MapPost("/api/orders", [Authorize]
+async (
+    CreateOrderRequest req,
+    MG_PR3Context db,
+    ClaimsPrincipal user) =>
+{
+    if (req.Items == null || req.Items.Count == 0)
+        return Results.BadRequest("Список товаров пуст");
+    var userId = GetUserId(user); //получаем id user из jwt
+
+    // 3. Проверяем каждый размер: существует и хватает ли на складе
+    foreach (var item in req.Items)
+    {
+        if (item.Count <= 0)
+            return Results.BadRequest($"Некорректное количество для ClothesSize {item.ClothesSizeID}");
+
+        var cs = await db.ClothesSizes.FindAsync(item.ClothesSizeID);
+        if (cs == null)
+            return Results.BadRequest($"Размер товара с ID {item.ClothesSizeID} не найден");
+
+        if (cs.CountClothes < item.Count)
+            return Results.BadRequest(
+                $"Недостаточно товара для ClothesSize {item.ClothesSizeID}: " +
+                $"в наличии {cs.CountClothes}, запрошено {item.Count}");
+    }
+    var newStatus = await db.OrderStatuses
+        .FirstOrDefaultAsync(s => s.StatusName == "Новый");
+
+    if (newStatus == null)
+        return Results.Problem("Статус 'Новый' отсутствует в БД");
+
+    var order = new Order
+    {
+        CreateDate = DateTime.Now,
+        CurrentStatusId = newStatus.Id,
+        UserId = userId
+    };
+
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(); // нужен ID заказа
+
+    foreach (var item in req.Items)
+    {
+        db.OrderClothes.Add(new OrderClothe
+        {
+            OrderId = order.Id,
+            ClothesSizeId = item.ClothesSizeID,
+            Count = item.Count
+        });
+    }
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        orderId = order.Id,
+        createDate = order.CreateDate,
+        status = newStatus.StatusName,
+        items = req.Items.Count
+    });
+})
+.WithTags("Orders")
+.WithSummary("Создать новый заказ (только авторизованный пользователь)");
 app.Run();
