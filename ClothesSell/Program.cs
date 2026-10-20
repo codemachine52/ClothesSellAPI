@@ -183,4 +183,33 @@ async (
 })
 .WithTags("Orders")
 .WithSummary("Создать новый заказ (только авторизованный пользователь)");
+
+app.MapGet("/api/orders/status", [Authorize] async (string q, MG_PR3Context db) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+        return Results.BadRequest("Параметр 'q' обязателен и не может быть пустым");
+    var list = await db.Orders.Where(or => or.CurrentStatus.StatusName.Equals(q)).AsNoTracking().ToListAsync();
+    return Results.Ok(list);
+})
+.WithTags("Orders")
+.WithSummary("Поиск заказов с определенным статусом");
+
+app.MapGet("/api/orders/user/{userId:int}", [Authorize] async (int userId, MG_PR3Context db, ClaimsPrincipal us) =>
+{
+    var currentId = GetUserId(us);
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+
+    if (currentRole != "Менеджер" && currentId != userId)
+        return Results.Forbid();
+
+    var list = await db.Orders
+        .Where(o => o.UserID == userId)
+        .Include(o => o.OrderClothes)
+        .AsNoTracking()
+        .ToListAsync();
+
+    return Results.Ok(list);
+})
+.WithTags("Orders")
+.WithSummary("Поиск заказов определенного пользователя");
 app.Run();
