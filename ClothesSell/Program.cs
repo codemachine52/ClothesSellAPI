@@ -293,6 +293,4 @@ app.MapPost("/api/management/clothes/{clothesId:int}/archive", [Authorize] async
     });
 })
 .WithTags("Management")
-.WithSummary("Убрать товар из продажи (только для Менеджера)");
-
 app.Run();
