@@ -103,7 +103,11 @@ app.MapPost("/api/auth/login", async (LoginReq req, MG_PR3Context db) =>
     return Results.Json(new AuthResponse(token, user.Role?.Name ?? "Клиент"));
 });
 
-app.MapGet("/api/clothes", async (MG_PR3Context context) => Results.Json(await context.Clothes.AsNoTracking().ToListAsync()));
+app.MapGet("/api/clothes", async (MG_PR3Context context) =>
+{
+    var list = await context.Clothes.Where(c => c.InSelling == true).AsNoTracking().ToListAsync();
+    return Results.Json(list);
+});
 
 
 app.MapGet("/api/clothes/search", async (string q, MG_PR3Context db) =>
@@ -121,17 +125,22 @@ app.MapGet("/api/clothes/search", async (string q, MG_PR3Context db) =>
 .WithTags("Clothes")
 .WithSummary("Поиск одежды по части названия (публично)");
 
-app.MapPost("/api/orders", [Authorize]
-async (
-    CreateOrderRequest req,
-    MG_PR3Context db,
-    ClaimsPrincipal user) =>
+app.MapPost("/api/orders", [Authorize] async (CreateOrderRequest req, MG_PR3Context db, ClaimsPrincipal user) =>
 {
     if (req.Items == null || req.Items.Count == 0)
         return Results.BadRequest("Список товаров пуст");
-    var userId = GetUserId(user); //получаем id user из jwt
+    var userId = GetUserId(user);
+    var newStatus = await db.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Новый");
+    if (newStatus == null)
+        return Results.Problem("Статус 'Новый' отсутствует в БД");
+    var order = new Order
+    {
+        CreateDate = DateTime.Now,
+        CurrentStatusID = newStatus.ID,
+        UserID = userId
+    };
+    db.Orders.Add(order);
 
-    // 3. Проверяем каждый размер: существует и хватает ли на складе
     foreach (var item in req.Items)
     {
         if (item.Count <= 0)
@@ -142,31 +151,12 @@ async (
             return Results.BadRequest($"Размер товара с ID {item.ClothesSizeID} не найден");
 
         if (cs.CountClothes < item.Count)
-            return Results.BadRequest(
-                $"Недостаточно товара для ClothesSize {item.ClothesSizeID}: " +
-                $"в наличии {cs.CountClothes}, запрошено {item.Count}");
-    }
-    var newStatus = await db.OrderStatuses
-        .FirstOrDefaultAsync(s => s.StatusName == "Новый");
+            return Results.BadRequest($"Недостаточно товара для ClothesSize {item.ClothesSizeID}: в наличии {cs.CountClothes}, запрошено {item.Count}");
 
-    if (newStatus == null)
-        return Results.Problem("Статус 'Новый' отсутствует в БД");
-
-    var order = new Order
-    {
-        CreateDate = DateTime.Now,
-        CurrentStatusID = newStatus.ID,
-        UserID = userId
-    };
-
-    db.Orders.Add(order);
-    await db.SaveChangesAsync(); // нужен ID заказа
-
-    foreach (var item in req.Items)
-    {
+        cs.CountClothes -= item.Count;
         db.OrderClothes.Add(new OrderClothe
         {
-            OrderID = order.ID,
+            Order = order,
             ClothesSizeID = item.ClothesSizeID,
             Count = item.Count
         });
@@ -184,11 +174,26 @@ async (
 .WithTags("Orders")
 .WithSummary("Создать новый заказ (только авторизованный пользователь)");
 
-app.MapGet("/api/orders/status", [Authorize] async (string q, MG_PR3Context db) =>
+app.MapGet("/api/orders/status", [Authorize] async (string q, MG_PR3Context db, ClaimsPrincipal us) =>
 {
     if (string.IsNullOrWhiteSpace(q))
-        return Results.BadRequest("Параметр 'q' обязателен и не может быть пустым");
-    var list = await db.Orders.Where(or => or.CurrentStatus.StatusName.Equals(q)).AsNoTracking().ToListAsync();
+        return Results.BadRequest("Параметр 'q' обязателен");
+
+    var currentId = GetUserId(us);
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+
+    var query = db.Orders.Include(o => o.CurrentStatus).AsQueryable();
+
+    if (currentRole != "Менеджер")
+    {
+        query = query.Where(o => o.UserID == currentId);
+    }
+
+    var list = await query
+        .Where(or => or.CurrentStatus.StatusName.Equals(q))
+        .AsNoTracking()
+        .ToListAsync();
+
     return Results.Ok(list);
 })
 .WithTags("Orders")
@@ -205,6 +210,7 @@ app.MapGet("/api/orders/user/{userId:int}", [Authorize] async (int userId, MG_PR
     var list = await db.Orders
         .Where(o => o.UserID == userId)
         .Include(o => o.OrderClothes)
+        .Include(o => o.CurrentStatus)
         .AsNoTracking()
         .ToListAsync();
 
@@ -212,4 +218,35 @@ app.MapGet("/api/orders/user/{userId:int}", [Authorize] async (int userId, MG_PR
 })
 .WithTags("Orders")
 .WithSummary("Поиск заказов определенного пользователя");
+
+app.MapPost("/api/orders/{orderId:int}/statusChange", [Authorize] async (int orderId, string statusName, MG_PR3Context db, ClaimsPrincipal us) =>
+{
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+    if (currentRole != "Менеджер")
+        return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(statusName))
+    {
+        return Results.BadRequest("Нельзя передавать такой статус! Укажите его явно.");
+    }
+
+    var order = await db.Orders.FirstOrDefaultAsync(o => o.ID == orderId);
+    if (order == null)
+    {
+        return Results.BadRequest("Заказ с таким ID не найден. Проверьте еще раз введенный ID.");
+    }
+
+    var newStatus = await db.OrderStatuses.FirstOrDefaultAsync(st => st.StatusName.Equals(statusName));
+    if (newStatus == null)
+    {
+        return Results.BadRequest($"Статус с названием '{statusName}' не найден в системе.");
+    }
+
+    order.CurrentStatusID = newStatus.ID;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(order);
+})
+.WithTags("Orders", "Status")
+.WithSummary("Изменение статуса определенного заказа");
 app.Run();
