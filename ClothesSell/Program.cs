@@ -249,4 +249,28 @@ app.MapPost("/api/orders/{orderId:int}/statusChange", [Authorize] async (int ord
 })
 .WithTags("Orders", "Status")
 .WithSummary("Изменение статуса определенного заказа");
+app.MapPost("/api/management/clothes-sizes/{sizeId:int}", [Authorize] async (int sizeId, int newCount, MG_PR3Context db, ClaimsPrincipal us) =>
+{
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+    if (currentRole != "Менеджер")
+        return Results.Forbid();
+
+    if (newCount < 0)
+        return Results.BadRequest("Количество товара на складе не может быть отрицательным.");
+
+    var clothSize = await db.ClothesSizes.FirstOrDefaultAsync(cs => cs.ID == sizeId);
+    if (clothSize == null)
+        return Results.BadRequest($"Размер товара с ID {sizeId} не найден в системе.");
+    clothSize.CountClothes = newCount;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        message = "Количество товара успешно обновлено",
+        sizeId = clothSize.ID,
+        count = clothSize.CountClothes
+    });
+})
+.WithTags("Management")
+.WithSummary("Изменить количество остатка товара определенного размера (только для Менеджера)");
 app.Run();
