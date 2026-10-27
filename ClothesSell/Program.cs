@@ -273,4 +273,26 @@ app.MapPost("/api/management/clothes-sizes/{sizeId:int}", [Authorize] async (int
 })
 .WithTags("Management")
 .WithSummary("Изменить количество остатка товара определенного размера (только для Менеджера)");
+app.MapPost("/api/management/clothes/{clothesId:int}/archive", [Authorize] async (int clothesId, MG_PR3Context db, ClaimsPrincipal us) =>
+{
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+    if (currentRole != "Менеджер")
+        return Results.Forbid();
+    var cloth = await db.Clothes.FirstOrDefaultAsync(c => c.ID == clothesId);
+    if (cloth == null)
+    {
+        return Results.BadRequest($"Товар с ID {clothesId} не найден в системе.");
+    }
+    cloth.InSelling = false;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        message = "Товар успешно убран из продажи",
+        clothesId = cloth.ID
+    });
+})
+.WithTags("Management")
+.WithSummary("Убрать товар из продажи (только для Менеджера)");
+
 app.Run();
