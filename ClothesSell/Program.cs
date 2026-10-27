@@ -292,5 +292,27 @@ app.MapPost("/api/management/clothes/{clothesId:int}/archive", [Authorize] async
         clothesId = cloth.ID
     });
 })
+.WithTags("Management");
+app.MapPost("/api/management/clothes/{clothesId:int}/restore", [Authorize] async (int clothesId, MG_PR3Context db, ClaimsPrincipal us) =>
+{
+    var currentRole = us.FindFirstValue(ClaimTypes.Role);
+    if (currentRole != "Менеджер")
+        return Results.Forbid();
+
+    var cloth = await db.Clothes.FirstOrDefaultAsync(c => c.ID == clothesId);
+    if (cloth == null)
+    {
+        return Results.BadRequest($"Товар с ID {clothesId} не найден в системе.");
+    }
+    cloth.InSelling = true;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        message = "Товар успешно возвращен в продажу",
+        clothesId = cloth.ID
+    });
+})
 .WithTags("Management")
+.WithSummary("Вернуть товар в продажу (только для Менеджера)");
 app.Run();
