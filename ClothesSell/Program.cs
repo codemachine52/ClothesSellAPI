@@ -249,7 +249,6 @@ app.MapPost("/api/orders/{orderId:int}/statusChange", [Authorize] async (int ord
 })
 .WithTags("Orders", "Status")
 .WithSummary("Изменение статуса определенного заказа");
-
 app.MapPost("/api/management/clothes-sizes/{sizeId:int}", [Authorize] async (int sizeId, int newCount, MG_PR3Context db, ClaimsPrincipal us) =>
 {
     var currentRole = us.FindFirstValue(ClaimTypes.Role);
@@ -274,4 +273,5 @@ app.MapPost("/api/management/clothes-sizes/{sizeId:int}", [Authorize] async (int
 })
 .WithTags("Management")
 .WithSummary("Изменить количество остатка товара определенного размера (только для Менеджера)");
+
 app.Run();
